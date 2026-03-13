@@ -15,6 +15,15 @@ terraform {
       version = "~> 1.14"
     }
   }
+
+  # Ajánlott: S3 remote backend, hogy a state ne csak lokálisan legyen.
+  # Aktiválás előtt: aws s3 mb s3://eks-lab-tfstate-<account-id> --region eu-north-1
+  #
+  # backend "s3" {
+  #   bucket = "eks-lab-tfstate-<account-id>"
+  #   key    = "eks-lab/terraform.tfstate"
+  #   region = "eu-north-1"
+  # }
 }
 
 provider "aws" {
@@ -141,6 +150,27 @@ resource "kubectl_manifest" "bootstrap_platform" {
   depends_on = [
     helm_release.argocd
   ]
+}
+
+# ------------------------------------------------------------------
+# Destroy-safe cleanup: NLB eltávolítása terraform destroy előtt
+# Az ingress-nginx LoadBalancer service AWS NLB-t hoz létre, amit
+# a Terraform nem kezel – ha marad, a VPC törlése meghiúsul.
+# ------------------------------------------------------------------
+
+resource "null_resource" "cleanup_nlb" {
+  triggers = {
+    cluster_name = module.eks.cluster_name
+    region       = "eu-north-1"
+  }
+
+  provisioner "local-exec" {
+    when       = destroy
+    interpreter = ["PowerShell", "-Command"]
+    command    = "aws eks update-kubeconfig --region ${self.triggers.region} --name ${self.triggers.cluster_name}; kubectl delete svc ingress-nginx-controller -n ingress-nginx --ignore-not-found; Start-Sleep -Seconds 30"
+  }
+
+  depends_on = [helm_release.argocd]
 }
 
 # ------------------------------------------------------------------

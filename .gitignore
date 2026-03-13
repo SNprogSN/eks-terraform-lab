@@ -4,9 +4,12 @@ terraform.tfstate
 terraform.tfstate.*
 *.tfstate
 *.tfstate.*
-.terraform/
-.terraform.lock.hcl
 terraform.tfstate.lock.info
+# .terraform.lock.hcl NE legyen kizarva - rogziti a provider verziokat!
+
+# Graphviz generalt fajlok
+*.dot
+*.svg
 
 # AWS
 .aws/
