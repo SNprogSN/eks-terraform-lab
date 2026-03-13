@@ -150,51 +150,102 @@ aws sts get-caller-identity
 Sikeres kimenet:
 ```json
 {
-    "UserId": "AIDA...",
-    "Account": "123456789012",
-    "Arn": "arn:aws:iam::123456789012:user/terraform-eks-lab"
+    "UserId": "AIDA****************",
+    "Account": "************",
+    "Arn": "arn:aws:iam::************:user/terraform-eks-lab"
 }
 ```
 
 ---
 
-## Telepítés
+## Telepítés – lépésről lépésre
 
-### 0. Git repo beállítása
+### ✅ 0. Git repo beállítása
+
+`.gitignore` létrehozása (Terraform state és credentials kizárása):
 
 ```powershell
-cd d:\ITemp\AWSgyakorlas2026\eks-terraform-lab
-git init
-git add .
-git commit -m "initial: eks-terraform-lab project setup"
+@"
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+.terraform.lock.hcl
+
+# AWS
+.aws/
+
+# OS
+.DS_Store
+Thumbs.db
+"@ | Out-File -Encoding utf8 .gitignore
 ```
 
-Hozz létre egy új repót a GitHubon (pl. `eks-terraform-lab`), majd:
+`.gitattributes` létrehozása (LF line endings kényszerítése YAML/Terraform fájloknál):
+
+```
+* text=auto eol=lf
+*.tf    text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.sh    text eol=lf
+*.md    text eol=lf
+```
+
+Repo inicializálása és push:
 
 ```powershell
-git remote add origin https://github.com/<felhasználónév>/eks-terraform-lab.git
+git init
+git rm --cached -r .   # line ending újraindexelés
+git add .
+git commit -m "initial: eks-terraform-lab AWS EKS GitOps setup"
 git branch -M main
+git remote add origin https://github.com/SNprogSN/eks-terraform-lab.git
 git push -u origin main
 ```
 
-> **Fontos:** A `.gitignore` tartalmazza a `terraform.tfstate` és `.aws/` mappákat – soha ne commitolj state fájlt vagy credentials-t!
+### ✅ 1. AWS credentials beállítása
 
-### 1. Terraform inicializálás
+```powershell
+aws configure
+# AWS Access Key ID:     <IAM user access key>
+# AWS Secret Access Key: <titkos kulcs>
+# Default region name:   eu-west-1
+# Default output format: json
+```
+
+Ellenőrzés – sikeres output példa:
+
+```json
+{
+    "UserId": "AIDA****************",
+    "Account": "************",
+    "Arn": "arn:aws:iam::************:user/terraform-eks-lab"
+}
+```
+
+### 2. Terraform inicializálás
 
 ```powershell
 cd infra\terraform
 terraform init
 ```
 
-Letölti az AWS, VPC és EKS modulokat.
+Letölti az összes providert és modult:
+- `hashicorp/aws`
+- `terraform-aws-modules/vpc/aws`
+- `terraform-aws-modules/eks/aws`
+- `hashicorp/helm`
+- `gavinbunney/kubectl`
 
-### 2. Tervezett változások megtekintése
+### 3. Tervezett változások megtekintése
 
 ```powershell
 terraform plan
 ```
 
-### 3. Infrastruktúra felépítése
+### 4. Infrastruktúra felépítése
 
 ```powershell
 terraform apply
@@ -202,7 +253,7 @@ terraform apply
 
 > Az EKS cluster létrehozása ~10–15 percet vesz igénybe.
 
-### 4. kubectl konfigurálása
+### 5. kubectl konfigurálása
 
 ```powershell
 aws eks update-kubeconfig --region eu-west-1 --name eks-lab-cluster
@@ -210,7 +261,7 @@ aws eks update-kubeconfig --region eu-west-1 --name eks-lab-cluster
 
 Ez a parancs a `terraform apply` outputjában is megjelenik automatikusan.
 
-### 5. ArgoCD elérése
+### 6. ArgoCD elérése
 
 ```powershell
 # Admin jelszó lekérése
