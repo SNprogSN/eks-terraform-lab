@@ -27,10 +27,6 @@ provider "aws" {
 
 data "aws_availability_zones" "available" {}
 
-data "aws_eks_cluster_auth" "cluster" {
-  name = module.eks.cluster_name
-}
-
 # ------------------------------------------------------------------
 # VPC
 # ------------------------------------------------------------------
@@ -77,6 +73,9 @@ module "eks" {
   # Allow kubectl access from anywhere (restrict in production)
   cluster_endpoint_public_access = true
 
+  # Grant cluster admin to the IAM identity that runs Terraform
+  enable_cluster_creator_admin_permissions = true
+
   eks_managed_node_groups = {
     default = {
       instance_types = ["t3.small"]
@@ -95,15 +94,23 @@ provider "helm" {
   kubernetes {
     host                   = module.eks.cluster_endpoint
     cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-    token                  = data.aws_eks_cluster_auth.cluster.token
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "aws"
+      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", "eu-north-1"]
+    }
   }
 }
 
 provider "kubectl" {
   host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-  token                  = data.aws_eks_cluster_auth.cluster.token
-  load_config_file       = false
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", "eu-north-1"]
+  }
+  load_config_file = false
 }
 
 # ------------------------------------------------------------------
@@ -150,5 +157,5 @@ output "cluster_endpoint" {
 
 output "configure_kubectl" {
   description = "Run this command to configure kubectl"
-  value       = "aws eks update-kubeconfig --region eu-west-1 --name ${module.eks.cluster_name}"
+  value       = "aws eks update-kubeconfig --region eu-north-1 --name ${module.eks.cluster_name}"
 }
