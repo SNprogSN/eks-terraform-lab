@@ -93,6 +93,19 @@ module "eks" {
       desired_size   = 2
     }
   }
+
+  # Allow all traffic between nodes (e.g. ingress-nginx → pod port 80)
+  # Default rule only covers ephemeral ports 1025-65535
+  node_security_group_additional_rules = {
+    ingress_self_all = {
+      description = "Node to node all ports (required for ingress-nginx to reach pods on low ports)"
+      protocol    = "-1"
+      from_port   = 0
+      to_port     = 0
+      type        = "ingress"
+      self        = true
+    }
+  }
 }
 
 # ------------------------------------------------------------------
