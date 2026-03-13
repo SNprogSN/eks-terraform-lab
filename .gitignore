@@ -11,6 +11,9 @@ terraform.tfstate.lock.info
 *.dot
 *.svg
 
+# Audit snapshot fajlok (erzekeny AWS adatok)
+scripts/audit-*.json
+
 # AWS
 .aws/
 
