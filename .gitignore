@@ -1,0 +1,16 @@
+# Terraform
+.terraform/
+terraform.tfstate
+terraform.tfstate.*
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate.lock.info
+
+# AWS
+.aws/
+
+# OS
+.DS_Store
+Thumbs.db

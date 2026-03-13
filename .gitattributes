@@ -1,0 +1,10 @@
+# Enforce LF line endings for all files (important for YAML/Terraform on Linux)
+* text=auto eol=lf
+
+# Explicitly LF for infrastructure files
+*.tf        text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+*.sh        text eol=lf
+*.md        text eol=lf
+.gitignore  text eol=lf
