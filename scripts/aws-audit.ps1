@@ -85,6 +85,25 @@ if ($LASTEXITCODE -eq 0) {
     $unit    = $ceJson.ResultsByTime[0].Total.UnblendedCost.Unit
     $audit.cost_current_month = @{ Amount = $amount; Unit = $unit; Period = "$startDate / $endDate" }
     Write-Host "   Aktualis koltseg: $amount $unit" -ForegroundColor Green
+
+    # Szolgáltatásonkénti bontás (FinOps)
+    $ceByService = aws ce get-cost-and-usage `
+        --time-period Start=$startDate,End=$endDate `
+        --granularity MONTHLY `
+        --metrics UnblendedCost `
+        --group-by Type=DIMENSION,Key=SERVICE `
+        --output json 2>$null | ConvertFrom-Json
+
+    if ($ceByService) {
+        $audit.cost_by_service = $ceByService.ResultsByTime[0].Groups | ForEach-Object {
+            [PSCustomObject]@{ Service = $_.Keys[0]; Amount = $_.Metrics.UnblendedCost.Amount; Unit = $_.Metrics.UnblendedCost.Unit }
+        } | Where-Object { [double]$_.Amount -gt 0 }
+
+        Write-Host "   Koltseg szolgaltasonkent:" -ForegroundColor Green
+        $audit.cost_by_service | Sort-Object { [double]$_.Amount } -Descending | ForEach-Object {
+            Write-Host "     $($_.Amount.PadLeft(8)) $($_.Unit)  $($_.Service)" -ForegroundColor White
+        }
+    }
 } else {
     $audit.cost_current_month = @{ Error = $ceRaw -join " "; Note = "Cost Explorer nincs aktivalva, vagy az adatok meg nem elerhetok (uj account ~24 ora). Aktivalas: AWS Console -> Billing -> Cost Explorer -> Enable." }
     Write-Host "   Cost Explorer nem elerheto: $($ceRaw -join ' ')" -ForegroundColor DarkYellow

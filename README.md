@@ -349,7 +349,20 @@ powershell -ExecutionPolicy Bypass -File scripts\aws-audit.ps1 -OutputFile scrip
 
 ### Cost Explorer – havi költség ellenőrzése
 
-Az audit script automatikusan lekéri az aktuális havi AWS költséget (11. lépés):
+Az audit script automatikusan lekéri az aktuális havi AWS költséget (11. lépés).
+
+#### Mi ez az API?
+
+A `GetCostAndUsage` az **AWS Cost Explorer API**, amely programból (CLI, SDK, CI/CD) lekérdezi az account költségeit.
+
+| Funkció | Ár |
+|---|---|
+| AWS Cost Explorer web UI | **ingyenes** |
+| Cost Explorer API (`aws ce ...`) | **$0.01 / kérés** |
+
+Egy audit futtatás = $0.01 (~4 Ft). Ha naponta egyszer futtatod: ~$0.30/hónap.
+
+#### Teljes összeg – egyetlen lekérdezés
 
 ```powershell
 aws ce get-cost-and-usage `
@@ -357,6 +370,37 @@ aws ce get-cost-and-usage `
     --granularity MONTHLY `
     --metrics UnblendedCost
 ```
+
+#### Szolgáltatásonkénti bontás (FinOps-os módszer)
+
+Ez mutatja meg pontosan, melyik AWS szolgáltatás mennyit költ – DevOps és FinOps csapatok ezt használják:
+
+```powershell
+aws ce get-cost-and-usage `
+    --time-period Start=2026-03-01,End=2026-03-31 `
+    --granularity MONTHLY `
+    --metrics UnblendedCost `
+    --group-by Type=DIMENSION,Key=SERVICE
+```
+
+Tipikus kimenet (labor környezet):
+
+```json
+{
+  "Groups": [
+    { "Keys": ["Amazon Elastic Kubernetes Service"], "Metrics": { "UnblendedCost": { "Amount": "0.20", "Unit": "USD" } } },
+    { "Keys": ["Amazon EC2"],                        "Metrics": { "UnblendedCost": { "Amount": "0.85", "Unit": "USD" } } },
+    { "Keys": ["Amazon VPC"],                        "Metrics": { "UnblendedCost": { "Amount": "0.11", "Unit": "USD" } } }
+  ]
+}
+```
+
+#### Mikor használják DevOps-ok?
+
+- Napi cost check CI/CD pipeline-ban
+- Terraform destroy utáni ellenőrzés (pénzt generál-e még valami?)
+- FinOps dashboard adatforrás
+- Slack alert ha a cost threshold túllépik
 
 > **Fontos:** A Cost Explorer **globális API** (nem regionális). Új accounton aktiválni kell:
 > AWS Console → **Billing** → **Cost Explorer** → **Enable**
