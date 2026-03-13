@@ -347,6 +347,23 @@ powershell -ExecutionPolicy Bypass -File scripts\aws-audit.ps1 -OutputFile scrip
 
 > **Fontos:** Az audit JSON fájlok AWS erőforrás ID-kat és neveket tartalmaznak – a `.gitignore` kizárja őket (`scripts/audit-*.json`). Soha ne commitold őket!
 
+### Cost Explorer – havi költség ellenőrzése
+
+Az audit script automatikusan lekéri az aktuális havi AWS költséget (11. lépés):
+
+```powershell
+aws ce get-cost-and-usage `
+    --time-period Start=2026-03-01,End=2026-03-31 `
+    --granularity MONTHLY `
+    --metrics UnblendedCost
+```
+
+> **Fontos:** A Cost Explorer **globális API** (nem regionális). Új accounton aktiválni kell:
+> AWS Console → **Billing** → **Cost Explorer** → **Enable**
+> Az adatok az aktiválás után ~24 óra múlva érhetők el.
+
+Ha az audit script futásakor a Cost Explorer még nem aktív, a script nem áll le hibával – egy figyelmeztetést ír ki és folytatja.
+
 Sikeres destroy után csak az AWS default erőforrások maradhatnak:
 
 | Erőforrás | Elvárt érték |
