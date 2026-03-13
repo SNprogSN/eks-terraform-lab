@@ -326,12 +326,70 @@ Invoke-Item graph.svg
 
 ## Infrastruktúra eltávolítása
 
-> **Fontos:** A `null_resource.cleanup_nlb` automatikusan törli az ingress-nginx NLB service-t destroy előtt, és 30 másodpercet vár amíg az AWS NLB felszabadul – így a VPC törlése nem akad el.
+> **Ismert hiba – `terraform destroy` több menetben szükséges (`ResourceInUseException: Cluster has nodegroups attached`):** Az EKS modul néha párhuzamosan hoz létre két node group-ot (pl. egy korábbi félbemaradt apply után). Az egyik Terraform state-ben van, a másik "árva" marad. A destroy az állami node group-ot törli, de az AWS API még az árva miatt nem engedi a cluster törlését. **Javítás:**
+> 1. `aws eks list-nodegroups --cluster-name eks-lab-cluster --region eu-north-1` – keress árva node group-ot
+> 2. `aws eks delete-nodegroup --cluster-name eks-lab-cluster --nodegroup-name <ARV_NEVE> --region eu-north-1`
+> 3. Várj ~5 percet, majd futtasd újra: `terraform destroy -auto-approve`
+
+
 
 ```powershell
 cd infra\terraform
 terraform destroy
 ```
+
+---
+
+## Költségbecslés – eu-north-1
+
+### Összetevők (alapjáraton, 2 node)
+
+| Erőforrás | Ár/óra | Megjegyzés |
+|---|---|---|
+| EKS Control Plane | $0.100 | fix, futó clusternél mindig |
+| 2× t3.small EC2 | $0.047 | $0.0236/instance |
+| NAT Gateway | $0.048 | + $0.048/GB adat |
+| EBS (2× 20GB GP3) | $0.003 | ~$3.80/hó összesen |
+| **ÖSSZESEN** | **~$0.198/óra** | |
+
+### Alapjárat (desired=2 node)
+
+| Időszak | Költség |
+|---|---|
+| Óra | ~$0.20 |
+| Nap | ~$4.75 |
+| Hét | ~$33 |
+| Hónap | ~$145 |
+
+### Skálázva (max=3 node)
+
+| Időszak | Többletköltség | Összesen |
+|---|---|---|
+| Óra | +$0.024 | ~$0.22 |
+| Nap | +$0.57 | ~$5.32 |
+| Hét | +$4 | ~$37 |
+| Hónap | +$17 | ~$162 |
+
+### Teljes labor (apppal, NLB-vel)
+
+| Tétel | Kb. ár/hó |
+|---|---|
+| NLB (ingress-nginx) | +$16 alap + $0.006/LCU-h |
+| NAT adat (kifelé ~10GB) | +$0.48 |
+| CloudWatch Logs (control plane) | +$1–2 |
+| **Teljes labor (apppal)** | **~$160–165/hó** |
+
+### Megtakarítási lehetőségek
+
+| Módszer | Megtakarítás |
+|---|---|
+| Spot instances (node group-ban) | -60–70% EC2-n |
+| 1 éves Reserved | -40% EC2-n |
+| desired=1 node (dev-hez) | -$17/hó |
+| NAT GW helyett NAT instance | -$25/hó (de karbantartás!) |
+| Cluster destroy ha nem kell | EKS $0.10/h is számít |
+
+> **Legfontosabb:** az EKS control plane **$0.10/h = $73/hó** – ez fut akkor is, ha egyetlen pod sincs. Labor esetén érdemes destroy-olni ha nem használod.
 
 ---
 
