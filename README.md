@@ -120,7 +120,7 @@ aws configure
 Bekéri:
 - **AWS Access Key ID** – az IAM felhasználó access key-je
 - **AWS Secret Access Key** – a hozzá tartozó titkos kulcs
-- **Default region** – pl. `eu-west-1`
+- **Default region** – pl. `eu-north-1`
 - **Default output format** – `json`
 
 A kulcsok el lesznek mentve: `C:\Users\<felhasználó>\.aws\credentials`
@@ -130,7 +130,7 @@ A kulcsok el lesznek mentve: `C:\Users\<felhasználó>\.aws\credentials`
 ```powershell
 $env:AWS_ACCESS_KEY_ID     = "AKIA..."
 $env:AWS_SECRET_ACCESS_KEY = "xxxxxxxxxxxxxxxx"
-$env:AWS_DEFAULT_REGION    = "eu-west-1"
+$env:AWS_DEFAULT_REGION    = "eu-north-1"
 ```
 
 Ez csak az aktuális PowerShell session-ben él.
@@ -211,7 +211,7 @@ git push -u origin main
 aws configure
 # AWS Access Key ID:     <IAM user access key>
 # AWS Secret Access Key: <titkos kulcs>
-# Default region name:   eu-west-1
+# Default region name:   eu-north-1
 # Default output format: json
 ```
 
@@ -225,7 +225,7 @@ Ellenőrzés – sikeres output példa:
 }
 ```
 
-### 2. Terraform inicializálás
+### ✅ 2. Terraform inicializálás
 
 ```powershell
 cd infra\terraform
@@ -239,13 +239,13 @@ Letölti az összes providert és modult:
 - `hashicorp/helm`
 - `gavinbunney/kubectl`
 
-### 3. Tervezett változások megtekintése
+### ✅ 3. Tervezett változások megtekintése
 
 ```powershell
 terraform plan
 ```
 
-### 4. Infrastruktúra felépítése
+### ✅ 4. Infrastruktúra felépítése
 
 ```powershell
 terraform apply
@@ -253,15 +253,17 @@ terraform apply
 
 > Az EKS cluster létrehozása ~10–15 percet vesz igénybe.
 
-### 5. kubectl konfigurálása
+> **Ismert hiba:** Ha `Kubernetes cluster unreachable` hibát kapsz a Helm providernél, győződj meg róla, hogy a `main.tf`-ben az EKS modulban szerepel az `enable_cluster_creator_admin_permissions = true` beállítás, és a provider `exec` alapú auth-ot használ (nem `token`-t). Részletek a `main.tf`-ben.
+
+### ✅ 5. kubectl konfigurálása
 
 ```powershell
-aws eks update-kubeconfig --region eu-west-1 --name eks-lab-cluster
+aws eks update-kubeconfig --region eu-north-1 --name eks-lab-cluster
 ```
 
 Ez a parancs a `terraform apply` outputjában is megjelenik automatikusan.
 
-### 6. ArgoCD elérése
+### ✅ 6. ArgoCD elérése
 
 ```powershell
 # Admin jelszó lekérése
@@ -287,12 +289,29 @@ Ezután elérhető: `https://localhost:8080` (user: `admin`)
 
 ## GitOps munkafolyamat
 
-Az ArgoCD a `https://github.com/SNprogSN/aks-gitops-lab` repót figyeli.
+Az ArgoCD a `https://github.com/SNprogSN/eks-terraform-lab` repót figyeli.
 
 - **bootstrap-apps** → szinkronizálja az `apps/microservice` mappát a `demo` namespace-be
 - **bootstrap-platform** → szinkronizálja a `platform/ingress` mappát, telepíti az ingress-nginx-et
 
 Minden `main` ágra pusholt változás automatikusan érvényesül a clusteren (`selfHeal: true`, `prune: true`).
+
+---
+
+## Terraform dependency gráf
+
+A resource-ok közötti függőségek vizualizálásához:
+
+```powershell
+# Graphviz telepítése (egyszer szükséges)
+winget install graphviz
+
+# Gráf generálása és megnyitása
+cd infra\terraform
+terraform graph | Out-File -Encoding ascii graph.dot
+& "C:\Program Files\Graphviz\bin\dot.exe" -Tsvg graph.dot -o graph.svg
+Invoke-Item graph.svg
+```
 
 ---
 
@@ -302,3 +321,5 @@ Minden `main` ágra pusholt változás automatikusan érvényesül a clusteren (
 cd infra\terraform
 terraform destroy
 ```
+
+> **Fontos:** A `terraform destroy` előtt az AWS NLB-t (ingress-nginx LoadBalancer service) törölni kell, különben a VPC törlése meghiúsul. Vagy hagyd, hogy az ArgoCD prune törölje, esetleg manuálisan: `kubectl delete svc ingress-nginx-controller -n ingress-nginx`
