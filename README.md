@@ -317,9 +317,37 @@ Invoke-Item graph.svg
 
 ## Infrastruktúra eltávolítása
 
+> **Fontos:** A `null_resource.cleanup_nlb` automatikusan törli az ingress-nginx NLB service-t destroy előtt, és 30 másodpercet vár amíg az AWS NLB felszabadul – így a VPC törlése nem akad el.
+
 ```powershell
 cd infra\terraform
 terraform destroy
 ```
 
-> **Fontos:** A `terraform destroy` előtt az AWS NLB-t (ingress-nginx LoadBalancer service) törölni kell, különben a VPC törlése meghiúsul. Vagy hagyd, hogy az ArgoCD prune törölje, esetleg manuálisan: `kubectl delete svc ingress-nginx-controller -n ingress-nginx`
+---
+
+## AWS audit script
+
+A `scripts/aws-audit.ps1` script snapshotot készít az AWS erőforrásokról. Hasznos destroy előtt és után az ellenőrzéshez.
+
+```powershell
+# Destroy előtt (referencia snapshot)
+powershell -ExecutionPolicy Bypass -File scripts\aws-audit.ps1 -OutputFile scripts\audit-before-destroy.json
+
+# Destroy után (ellenőrzés)
+powershell -ExecutionPolicy Bypass -File scripts\aws-audit.ps1 -OutputFile scripts\audit-after-destroy.json
+```
+
+> **Fontos:** Az audit JSON fájlok AWS erőforrás ID-kat és neveket tartalmaznak – a `.gitignore` kizárja őket (`scripts/audit-*.json`). Soha ne commitold őket!
+
+Sikeres destroy után csak az AWS default erőforrások maradhatnak:
+
+| Erőforrás | Elvárt érték |
+|---|---|
+| EKS cluster | 0 |
+| EC2 instance | 0 |
+| NAT gateway | 0 |
+| EBS volume | 0 |
+| VPC | 1 (default) |
+| Subnet | 3 (default VPC) |
+| Security group | 1-4 (default) |
