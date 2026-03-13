@@ -169,9 +169,16 @@ Sikeres kimenet:
 # Terraform
 .terraform/
 *.tfstate
-*.tfstate.backup
-*.tfvars
-.terraform.lock.hcl
+*.tfstate.*
+terraform.tfstate.lock.info
+# .terraform.lock.hcl NE legyen kizárva – rögzíti a provider verziókat!
+
+# Graphviz generált fájlok
+*.dot
+*.svg
+
+# Audit snapshot fájlok (érzékeny AWS adatok)
+scripts/audit-*.json
 
 # AWS
 .aws/
