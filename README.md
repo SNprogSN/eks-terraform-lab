@@ -262,6 +262,8 @@ terraform apply
 
 > **Ismert hiba:** Ha `Kubernetes cluster unreachable` hibát kapsz a Helm providernél, győződj meg róla, hogy a `main.tf`-ben az EKS modulban szerepel az `enable_cluster_creator_admin_permissions = true` beállítás, és a provider `exec` alapú auth-ot használ (nem `token`-t). Részletek a `main.tf`-ben.
 
+> **Ismert hiba – 504 Gateway Timeout az ingress-nginx mögötti pod-oknál:** Az EKS modul alapértelmezett node security group szabályai csak az `1025–65535` ephemeral portokon engedik a node→node forgalmat. Ha a backend pod alacsony porton hallgat (pl. `80`), az ingress-nginx controller nem tudja elérni – 504-et ad vissza. **Javítás:** a `main.tf` `node_security_group_additional_rules` blokkjában egy `ingress_self_all` rule engedélyezi az összes node→node forgalmat. Ez már szerepel a konfigurációban.
+
 ### ✅ 5. kubectl konfigurálása
 
 ```powershell

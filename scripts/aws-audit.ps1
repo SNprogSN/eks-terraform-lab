@@ -71,10 +71,11 @@ $audit.iam_roles = aws iam list-roles `
 
 # Cost Explorer (globális API, us-east-1 – aktiválás szükséges a Billing Console-ban)
 Write-Host "[11/11] Cost Explorer (aktuális hónap)..." -ForegroundColor Yellow
-$startDate = (Get-Date -Day 1).ToString("yyyy-MM-dd")
-$endDate   = (Get-Date).AddDays(1).ToString("yyyy-MM-dd")
+$now       = Get-Date
+$startDate = "{0:yyyy-MM}-01" -f $now
+$endDate   = $now.AddDays(1).ToString("yyyy-MM-dd")
 $ceRaw = aws ce get-cost-and-usage `
-    --time-period Start=$startDate,End=$endDate `
+    --time-period "Start=$startDate,End=$endDate" `
     --granularity MONTHLY `
     --metrics UnblendedCost `
     --output json 2>&1
